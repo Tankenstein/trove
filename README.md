@@ -33,12 +33,17 @@ never moves anything else.
 ## Install
 
 ```
-cargo install --path .
+cargo install --locked trove-cli
 ```
 
-This installs the `trove` binary. The first time you resume a chat, `trove` offers to add one
-line to your shell config (zsh, bash or fish), so that your shell stays in the chat's folder
-after the chat ends. Without it, resuming still works; you just end up back where you started.
+This installs the `trove` command. It needs Rust 1.89 or later, from
+[rustup.rs](https://rustup.rs), and a C compiler for the SQLite built into it. `--locked`
+builds with the exact dependency versions `trove` was tested with. To install from a clone
+instead, run `cargo install --locked --path .`.
+
+The first time you resume a chat, `trove` offers to add one line to your shell config (zsh,
+bash or fish), so that your shell stays in the chat's folder after the chat ends. Without it,
+resuming still works; you just end up back where you started.
 
 ## Usage
 
