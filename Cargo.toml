@@ -1,0 +1,42 @@
+[package]
+name = "trove-cli"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+description = "Find and resume coding agent chats: Claude Code, Codex, OpenCode, Copilot CLI, Pi and Gemini CLI"
+license = "MIT"
+repository = "https://github.com/Tankenstein/trove"
+readme = "README.md"
+keywords = ["claude", "codex", "opencode", "cli", "tui"]
+categories = ["command-line-utilities"]
+
+[lib]
+name = "trove"
+
+[[bin]]
+name = "trove"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+dirs = "7.0.0"
+jiff = "0.2.37"
+memchr = "2.8.3"
+ratatui = "0.30.2"
+rayon = "1.12.0"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["raw_value"] }
+unicode-width = "0.2.2"
+
+[dev-dependencies]
+# Test fixtures keep keys in the order Codex and Claude Code write them.
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+portable-pty = "0.9.0"
+tempfile = "3.27.0"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
