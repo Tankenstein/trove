@@ -59,7 +59,11 @@ impl Term {
                 out.extend_from_slice(&buf[..n]);
                 while let Some(i) = out[scanned..].windows(4).position(|w| w == b"\x1b[6n") {
                     scanned += i + 4;
-                    let _ = answer.lock().unwrap().write_all(b"\x1b[1;1R");
+                    let mut screen = Screen::new(rows, cols);
+                    screen.feed(&String::from_utf8_lossy(&out[..scanned]));
+                    let column = screen.col.min(cols - 1) + 1;
+                    let position = format!("\x1b[{};{column}R", screen.row + 1);
+                    let _ = answer.lock().unwrap().write_all(position.as_bytes());
                 }
             }
         });
@@ -665,6 +669,87 @@ fn a_chat_whose_folder_is_gone_prints_the_command() {
     term.expect("Projects/zoo && claude --resume");
     assert_eq!(term.wait(), 1);
     assert_eq!(agent_log(&home), "");
+}
+
+fn pick(home: &Home, args: &str, keys: &str) -> (u32, String) {
+    let script = format!("trove --pick {args} > ~/picked");
+    let mut term = Term::spawn(command(home, "/bin/sh", &["-c", &script], "/bin/sh"));
+    term.expect("zebra stripes");
+    term.send(keys);
+    let code = term.wait();
+    (
+        code,
+        fs::read_to_string(home.path().join("picked")).unwrap(),
+    )
+}
+
+#[test]
+fn pick_prints_the_chat_instead_of_resuming_it() {
+    let (home, zoo, _) = home_with_chats();
+    let resume = format!("cd {zoo} && claude --resume {}", id(1));
+
+    let (code, json) = pick(&home, "--json zebra", ENTER);
+    assert_eq!(code, 0);
+    let chat: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(chat["id"], id(1));
+    assert_eq!(chat["folder"], zoo);
+    assert_eq!(chat["resume"], resume);
+    assert!(chat.get("matches").is_none());
+    assert_eq!(agent_log(&home), "");
+}
+
+#[test]
+fn a_picked_command_resumes_the_chat_when_run() {
+    let (home, folder, _) = home_with_chats_in(NASTY);
+    let script = r#"cmd=$(trove --pick zebra) && eval "$cmd""#;
+    let mut term = Term::spawn(command(&home, "/bin/sh", &["-c", script], "/bin/sh"));
+    term.expect("zebra stripes");
+    term.send(ENTER);
+    term.expect("claude started");
+    assert_eq!(term.wait(), 0);
+    assert_eq!(
+        agent_log(&home),
+        format!("claude|{folder}|{folder}|--resume {}\n", id(1))
+    );
+    assert!(
+        !home.path().join("pwned").exists(),
+        "the folder name ran a command"
+    );
+}
+
+#[test]
+fn a_picked_command_carries_no_terminal_escapes() {
+    let (home, _, _) = home_with_chats_in("esc\x1b[31mred\x07");
+    let (code, command) = pick(&home, "zebra", ENTER);
+    assert_eq!(code, 0);
+    assert!(!command.contains(['\x1b', '\x07']), "{command:?}");
+    assert!(
+        command.ends_with(&format!("claude --resume {}\n", id(1))),
+        "{command:?}"
+    );
+}
+
+#[test]
+fn output_after_a_pick_starts_at_the_beginning_of_a_line() {
+    let (home, _, _) = home_with_chats();
+    let script = "trove --pick zebra > ~/picked; echo after-pick";
+    let mut term = Term::spawn(command(&home, "/bin/sh", &["-c", script], "/bin/sh"));
+    term.expect("zebra stripes");
+    term.send(ENTER);
+    term.expect("after-pick");
+    assert_eq!(term.wait(), 0);
+    assert!(
+        term.screen().lines().any(|l| l.starts_with("after-pick")),
+        "indented:\n{}",
+        term.screen()
+    );
+}
+
+#[test]
+fn esc_or_ctrl_c_picks_nothing() {
+    let (home, _, _) = home_with_chats();
+    assert_eq!(pick(&home, "zebra", ESC), (1, String::new()));
+    assert_eq!(pick(&home, "zebra", CTRL_C), (130, String::new()));
 }
 
 fn first_resume(home: &Home, shell: &str, answer: &str) -> String {

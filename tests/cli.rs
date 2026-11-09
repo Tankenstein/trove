@@ -32,6 +32,21 @@ fn help_version_and_bad_options() {
 }
 
 #[test]
+fn pick_needs_a_terminal_and_no_show() {
+    let home = Home::new();
+    let refused = |args: &[&str], reason: &str| {
+        let out = home.trove().args(args).output().unwrap();
+        assert!(!out.status.success());
+        assert!(String::from_utf8_lossy(&out.stderr).contains(reason));
+    };
+    refused(&["--pick", "zebra"], "needs a terminal");
+    refused(
+        &["--pick", "--show", &id(1)],
+        "--pick and --show don't go together",
+    );
+}
+
+#[test]
 fn piped_output_is_one_tab_separated_line_per_match() {
     let home = Home::new();
     let shop = home.project("shop");

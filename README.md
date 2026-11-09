@@ -50,6 +50,7 @@ resuming still works; you just end up back where you started.
 ```
 trove [words...]
 trove --json [words...]
+trove --pick [--json] [words...]
 trove --show [--json] ID...
 ```
 
@@ -67,14 +68,18 @@ trove --show [--json] ID...
 - When output is piped, matches are printed instead, one per line, tab-separated: age, agent,
   folder, title, resume command. `trove migration | head -1 | cut -f5` prints the command for
   the best match.
-- `--json` prints matches as JSON instead, one chat per line, and never opens the picker, even
-  in a terminal. Each has the chat's `id`, `agent`, `model`, `folder`, `title`, `started` and
+- `--json` prints matches as JSON instead, one chat per line, even in a terminal. Each has the chat's `id`, `agent`, `model`, `folder`, `title`, `started` and
   `updated` (in UTC), `messages` (how many), `archived`, `file`, `resume` (the command), and
   `matches`: up to three of the messages that match, each with its `role` and an excerpt.
+- `--pick` opens the picker, then prints the chat you pick instead of resuming it: its resume
+  command, or with `--json` the same JSON as `--json`, without `matches`. The picker draws on
+  the terminal, so this works inside `$(...)`, for scripts and launchers that let you choose a
+  chat: `cd "$(trove --pick --json | jq -r .folder)"` goes to a chat's folder.
 - `--show ID...` prints the chats with those ids whole: a heading with the title, the chat's
   details, then every prompt and reply. With `--json`, each is one line of JSON, with its
   messages in `transcript`.
-- `trove` exits with 1 when nothing matches or an id isn't found.
+- `trove` exits with 1 when nothing matches, an id isn't found, or you quit `--pick` with Esc,
+  and with 130 on Ctrl-C.
 
 ## For agents
 

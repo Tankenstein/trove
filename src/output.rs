@@ -84,6 +84,17 @@ pub fn show(env: &Env, db: &Path, ids: &[String], json: bool) -> Result<ExitCode
     Ok(exit(found_all))
 }
 
+/// Prints the chat picked with `--pick`: its resume command, or its details as JSON.
+pub fn picked(env: &Env, s: &Session, json: bool) -> Result<ExitCode> {
+    let line = if json {
+        serde_json::to_string(&Summary::of(s))?
+    } else {
+        printable(&resume::command(s, Quoting::of(env)))
+    };
+    write_line(&mut io::stdout().lock(), &line)?;
+    Ok(ExitCode::SUCCESS)
+}
+
 fn load(env: &Env, db: &Path) -> Result<(Connection, Vec<Session>)> {
     let conn = index::open(db)?;
     index::refresh(&conn, db, env, &Progress::default(), &mut || {})?;

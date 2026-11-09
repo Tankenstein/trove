@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{self, Stdout};
+use std::io::{self, IsTerminal, Stdout};
 use std::panic;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -8,9 +8,9 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use jiff::tz::TimeZone;
-use ratatui::backend::CrosstermBackend;
+use ratatui::backend::{Backend, ClearType, CrosstermBackend};
 use ratatui::crossterm::cursor::SetCursorStyle;
 use ratatui::crossterm::event::{
     self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyCode, KeyEvent, KeyEventKind,
@@ -67,6 +67,7 @@ pub fn pick(env: &Env, db: &Path, query: &str) -> Result<Outcome> {
     }
 
     let mut app = App::new(&conn, env, query, progress)?;
+    let _drawing = DrawOnTerminal::start().context("can't draw the picker on the terminal")?;
     let raw = RawMode::enable()?;
     let rows = terminal::size()?.1;
     let height = ((rows as u32 * HEIGHT_PERCENT / 100) as u16)
@@ -80,13 +81,59 @@ pub fn pick(env: &Env, db: &Path, query: &str) -> Result<Outcome> {
         },
     )?;
     let outcome = app.run(&mut term, &rx);
-    let _ = term.clear();
+    let start = term.get_frame().area().as_position();
+    let _ = term.set_cursor_position(start);
+    let _ = term.backend_mut().clear_region(ClearType::AfterCursor);
     let _ = term.show_cursor();
     drop(raw);
     if let Some(err) = &app.error {
         eprintln!("trove: couldn't update the index: {err}");
     }
     outcome
+}
+
+/// While the picker draws, points stdout at the terminal if it's captured, as in
+/// `$(trove --pick)`, and afterwards points it back so the pick is printed into the capture.
+/// Drawing on /dev/tty alone isn't enough: crossterm sends its cursor position query to stdout.
+struct DrawOnTerminal {
+    #[cfg(unix)]
+    captured: std::os::fd::OwnedFd,
+}
+
+impl DrawOnTerminal {
+    fn start() -> io::Result<Option<DrawOnTerminal>> {
+        if io::stdout().is_terminal() {
+            return Ok(None);
+        }
+        DrawOnTerminal::redirect().map(Some)
+    }
+
+    #[cfg(unix)]
+    fn redirect() -> io::Result<DrawOnTerminal> {
+        use std::os::fd::AsFd;
+        let tty = std::fs::OpenOptions::new().write(true).open("/dev/tty")?;
+        let captured = io::stdout().as_fd().try_clone_to_owned()?;
+        rustix::stdio::dup2_stdout(&tty)?;
+        Ok(DrawOnTerminal { captured })
+    }
+
+    #[cfg(not(unix))]
+    fn redirect() -> io::Result<DrawOnTerminal> {
+        Err(io::Error::other(
+            "capturing the picker's output only works on Unix",
+        ))
+    }
+}
+
+impl Drop for DrawOnTerminal {
+    fn drop(&mut self) {
+        #[cfg(unix)]
+        {
+            use std::io::Write;
+            let _ = io::stdout().flush();
+            let _ = rustix::stdio::dup2_stdout(&self.captured);
+        }
+    }
 }
 
 struct RawMode;
