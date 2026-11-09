@@ -1,6 +1,6 @@
 [package]
 name = "trove-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.89"
 description = "Find and resume coding agent chats: Claude Code, Codex, OpenCode, Copilot CLI, Pi and Gemini CLI"
