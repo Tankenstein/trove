@@ -241,6 +241,16 @@ pub mod codex {
         .to_string()
     }
 
+    pub fn exec_meta(id: &str, cwd: &str) -> String {
+        json!({
+            "timestamp": "2026-09-01T10:00:00.000Z", "ordinal": 0, "type": "session_meta",
+            "payload": {"session_id": id, "id": id, "timestamp": "2026-09-01T10:00:00.000Z", "cwd": cwd,
+                        "originator": "codex_exec", "cli_version": "0.166.0", "source": "exec",
+                        "thread_source": "user"},
+        })
+        .to_string()
+    }
+
     pub fn review_meta(id: &str, cwd: &str) -> String {
         json!({
             "timestamp": "2026-09-01T10:00:00.000Z", "type": "session_meta",

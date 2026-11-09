@@ -16,7 +16,7 @@ use crate::env::Env;
 use crate::parse::{self, Parsed, State};
 
 /// Bump when parsing changes, so existing indexes are rebuilt.
-const VERSION: &str = "12";
+const VERSION: &str = "13";
 /// Lines longer than this are skipped: compacted history and tool output, not chat text.
 const BLOCK: usize = 8 << 20;
 const BUSY_TIMEOUT: Duration = Duration::from_secs(10);

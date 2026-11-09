@@ -136,6 +136,14 @@ fn ignores_what_isnt_a_chat() {
         &id(3),
         &[codex::meta(&id(3), &shop), codex::injected(&shop)],
     );
+    home.codex(
+        ".codex",
+        &id(5),
+        &[
+            codex::exec_meta(&id(5), &shop),
+            codex::user("exec transcript").remove(0),
+        ],
+    );
     home.claude(
         ".claude",
         &shop,
@@ -149,9 +157,10 @@ fn ignores_what_isnt_a_chat() {
     let conn = home.refresh();
     assert_eq!(titles(&conn, ""), ["real chat"]);
     assert!(titles(&conn, "review transcript").is_empty());
+    assert!(titles(&conn, "exec transcript").is_empty());
     let text: i64 = conn
         .query_row(
-            "SELECT count(*) FROM fts WHERE text LIKE '%review transcript%'",
+            "SELECT count(*) FROM fts WHERE text LIKE '%review transcript%' OR text LIKE '%exec transcript%'",
             [],
             |r| r.get(0),
         )

@@ -116,7 +116,9 @@ chat's folder, then runs the agent's own resume command.
 \* Untested: written from each agent's source code and docs, and tested only against files and
 databases made to match them, not against a real install. Reports and fixes are welcome.
 
-Stores shared through symlinks are read once. Subagent and review sessions aren't listed.
+Stores shared through symlinks are read once. Subagent and review sessions aren't listed, nor
+are `codex exec` runs, which are usually started by scripts and other agents and which Codex's
+own resume list leaves out too.
 Archived chats are shown dimmed; chats whose folder no longer exists show the folder in red.
 
 Only prompts and replies are searchable. Tool calls and output, injected context (instructions

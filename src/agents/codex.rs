@@ -209,7 +209,10 @@ fn line(b: &[u8]) -> Option<Event> {
 fn header(b: &[u8]) -> Option<Header> {
     SESSION_META.find(&b[..b.len().min(HEAD)])?;
     let MetaLine { payload: p } = serde_json::from_slice(b).ok()?;
-    let hidden = p.source.as_ref().is_some_and(|s| s.is_object())
+    let hidden = p
+        .source
+        .as_ref()
+        .is_some_and(|s| s.is_object() || *s == "exec")
         || matches!(
             p.thread_source.as_deref(),
             Some("subagent" | "guardian_review")
